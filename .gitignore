@@ -1,0 +1,25 @@
+# Dependências e ignoráveis padrão
+node_modules/
+vendor/
+.DS_Store
+
+# Logs
+*.log
+
+# Cookies ou temps (se sobrar algo do nosso teste)
+cookies.txt
+
+# Arquivos sensíveis
+.env
+*.sql
+
+# Scripts de deploy (Senhas da DreamHost FTP)
+*.py
+*.tar.gz
+deploy.php
+fix_perms.php
+test*.php
+
+# Se estiver usando IDE local
+.vscode/
+.idea/
