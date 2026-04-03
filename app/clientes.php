@@ -7,7 +7,7 @@ $page_atual = 'clientes';
 
 require_once 'config/auth.php';
 
-$header_btn = can('edit_clients') ? '<button onclick="document.getElementById(\'modal-criar\').classList.remove(\'hidden\')"
+$header_btn = can('edit_clients') ? '<button onclick="abrirModal(\'modal-criar\')"
     class="btn-primary">
     <span class="material-symbols-outlined text-[18px]">add</span> Novo Cliente
 </button>' : '';
@@ -305,189 +305,384 @@ function sort_icon(string $col, string $current_sort, string $current_dir): stri
     <?php endif; ?>
 </section>
 
+<style>
+@keyframes modalIn {
+  from { opacity:0; transform:translateY(18px) scale(0.98); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    }
+}
+@keyframes overlayIn {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+.modal-box { animation: modalIn 0.26s cubic-bezier(0.16,1,0.3,1) both; }
+.modal-overlay { animation: overlayIn 0.2s ease both; }
+.modal-input {
+  width:100%; background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1); border-radius:12px;
+  padding:11px 16px; color:#f1f5f9; font-size:14px;
+  outline:none; transition:border-color .15s,box-shadow .15s;
+  -webkit-appearance:none; appearance:none;
+}
+.modal-input::placeholder { color:#475569; }
+.modal-input:focus {
+  border-color:rgba(74,222,128,.6);
+  box-shadow:0 0 0 3px rgba(74,222,128,.12);
+}
+.modal-input option { background:#0f172a; color:#f1f5f9; }
+.modal-label {
+  display:block; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.1em;
+  color:#64748b; margin-bottom:6px;
+}
+.modal-footer-btn-cancel {
+  padding:10px 20px; border-radius:12px; font-size:14px;
+  font-weight:600; color:#cbd5e1;
+  border:1px solid rgba(255,255,255,0.1);
+  background:transparent; cursor:pointer; transition:background .15s;
+}
+.modal-footer-btn-cancel:hover { background:rgba(255,255,255,0.06); }
+.modal-footer-btn-save {
+  padding:10px 20px; border-radius:12px; font-size:14px;
+  font-weight:700; color:#fff; cursor:pointer;
+  background:linear-gradient(135deg,#22c55e,#059669);
+  box-shadow:0 4px 16px rgba(34,197,94,.3);
+  border:none; display:flex; align-items:center; gap:6px;
+  transition:box-shadow .15s,transform .15s;
+}
+.modal-footer-btn-save:hover {
+  box-shadow:0 6px 24px rgba(34,197,94,.45);
+  transform:translateY(-1px);
+}
+</style>
+
 <!-- ══════ MODAL CRIAR ══════ -->
 <div id="modal-criar"
-     class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
-     onclick="if(event.target===this)this.classList.add('hidden')">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-        <div class="flex items-center justify-between px-7 py-5 border-b border-slate-100">
-            <div>
-                <h3 class="font-bold text-slate-900">Novo Cliente</h3>
-                <p class="text-xs text-slate-400">Preencha os dados do assinante</p>
-            </div>
-            <button onclick="document.getElementById('modal-criar').classList.add('hidden')"
-                    class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <form method="POST" action="actions/salvar_cliente.php" class="px-7 py-6 space-y-4">
-            <?= csrf_field() ?>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nome do Cliente *</label>
-                    <input name="nome" type="text" required placeholder="Ex: Empresa LTDA"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">E-mail</label>
-                    <input name="email" type="email" placeholder="contato@empresa.com"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Domínio</label>
-                    <input name="dominio" type="text" placeholder="empresa.com.br"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Valor Anual (R$)</label>
-                    <input name="valor_anual" type="number" step="0.01" min="0" placeholder="1200.00"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Forma de Pagamento</label>
-                    <select name="tipo_pagamento"
-                            class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none cursor-pointer">
-                        <option value="a vista">À vista</option>
-                        <option value="2x">2x</option>
-                        <option value="3x">3x</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Status</label>
-                    <select name="status"
-                            class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none cursor-pointer">
-                        <option value="em dia">Em dia</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="vence em 15 dias">Vence em 15 dias</option>
-                    </select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Data de Vencimento</label>
-                    <input name="data_vencimento_base" type="date"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-            </div>
-            <div class="flex justify-end gap-3 pt-2">
-                <button type="button" onclick="document.getElementById('modal-criar').classList.add('hidden')"
-                        class="px-5 py-2.5 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl text-sm transition-colors">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn-primary">
-                    <span class="material-symbols-outlined text-[16px]">save</span> Salvar Cliente
-                </button>
-            </div>
-        </form>
+     class="modal-overlay hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+     style="background:rgba(2,8,23,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)"
+     onclick="if(event.target===this)fecharModal('modal-criar')">
+
+  <div class="modal-box w-full sm:max-w-lg flex flex-col rounded-t-2xl sm:rounded-2xl"
+       style="max-height:90vh;background:rgba(15,23,42,.97);border:1px solid rgba(255,255,255,.08);box-shadow:0 25px 60px rgba(0,0,0,.6)"
+       onclick="event.stopPropagation()">
+
+    <!-- Header fixo -->
+    <div class="flex items-center justify-between px-6 py-4 shrink-0" style="border-bottom:1px solid rgba(255,255,255,.08)">
+      <div>
+        <h3 class="font-bold text-slate-100">Novo Cliente</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Preencha os dados do assinante</p>
+      </div>
+      <button onclick="fecharModal('modal-criar')" class="p-2 rounded-xl text-slate-500 hover:text-slate-200 transition-colors" style="background:rgba(255,255,255,.05)">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
     </div>
+
+    <!-- Form: scroll interno + footer fixo -->
+    <form method="POST" action="actions/salvar_cliente.php" class="flex flex-col flex-1 min-h-0">
+      <?= csrf_field() ?>
+
+      <!-- Área com scroll -->
+      <div class="overflow-y-auto flex-1 px-6 py-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <!-- Nome -->
+          <div class="sm:col-span-2">
+            <label class="modal-label">Nome do Cliente <span style="color:#4ade80">*</span></label>
+            <input name="nome" type="text" required placeholder="Ex: Empresa LTDA" class="modal-input"/>
+          </div>
+
+          <!-- E-mail -->
+          <div>
+            <label class="modal-label">E-mail</label>
+            <input name="email" type="email" placeholder="contato@empresa.com" class="modal-input"/>
+          </div>
+
+          <!-- Domínio -->
+          <div>
+            <label class="modal-label">Domínio</label>
+            <input name="dominio" type="text" placeholder="empresa.com.br" class="modal-input"/>
+          </div>
+
+          <!-- Tipo de Cobrança -->
+          <div>
+            <label class="modal-label">Tipo de Cobrança</label>
+            <select name="tipo_recorrencia" id="criar-recorrencia"
+                    onchange="toggleCamposRecorrencia('criar')"
+                    class="modal-input cursor-pointer">
+              <option value="anual">Anual</option>
+              <option value="mensal">Mensal</option>
+            </select>
+          </div>
+
+          <!-- Dia de Vencimento (só para mensal) -->
+          <div id="criar-dia-wrap" class="hidden">
+            <label class="modal-label">Dia de Vencimento <span style="color:#4ade80">*</span></label>
+            <input name="dia_vencimento" id="criar-dia" type="number" min="1" max="28" value="1" placeholder="1–28" class="modal-input"/>
+          </div>
+
+          <!-- Valor (label muda anual ↔ mensal) -->
+          <div>
+            <label class="modal-label" id="criar-label-valor">Valor Anual (R$)</label>
+            <input name="valor_anual" type="number" step="0.01" min="0" placeholder="0.00" class="modal-input"/>
+          </div>
+
+          <!-- Forma de Pagamento -->
+          <div>
+            <label class="modal-label">Forma de Pagamento</label>
+            <select name="tipo_pagamento" class="modal-input cursor-pointer">
+              <option value="a vista">À vista</option>
+              <option value="2x">2x</option>
+              <option value="3x">3x</option>
+            </select>
+          </div>
+
+          <!-- Alertar Admin -->
+          <div>
+            <label class="modal-label">Alertar Admin (dias antes)</label>
+            <input name="alerta_admin_dias" type="number" min="1" max="60" value="15" placeholder="15" class="modal-input"/>
+          </div>
+
+          <!-- Alertar Cliente -->
+          <div>
+            <label class="modal-label">Alertar Cliente (dias antes)</label>
+            <input name="alerta_cliente_dias" type="number" min="1" max="60" value="7" placeholder="7" class="modal-input"/>
+          </div>
+
+          <!-- Data de Vencimento (oculta se mensal) -->
+          <div id="criar-data-wrap">
+            <label class="modal-label">Data de Vencimento</label>
+            <input name="data_vencimento_base" type="date" class="modal-input"/>
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label class="modal-label">Status</label>
+            <select name="status" class="modal-input cursor-pointer">
+              <option value="em dia">Em dia</option>
+              <option value="pendente">Pendente</option>
+              <option value="vence em 15 dias">Vence em 15 dias</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer fixo — botões sempre visíveis -->
+      <div class="px-6 py-4 flex justify-end gap-3 shrink-0" style="border-top:1px solid rgba(255,255,255,.08)">
+        <button type="button" onclick="fecharModal('modal-criar')" class="modal-footer-btn-cancel">Cancelar</button>
+        <button type="submit" class="modal-footer-btn-save">
+          <span class="material-symbols-outlined text-[16px]">save</span> Salvar Cliente
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ══════ MODAL EDITAR ══════ -->
 <div id="modal-editar"
-     class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
-     onclick="if(event.target===this)this.classList.add('hidden')">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-        <div class="flex items-center justify-between px-7 py-5 border-b border-slate-100">
-            <div>
-                <h3 class="font-bold text-slate-900">Editar Cliente</h3>
-                <p class="text-xs text-slate-400">Atualize os dados do assinante</p>
-            </div>
-            <button onclick="document.getElementById('modal-editar').classList.add('hidden')"
-                    class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <form method="POST" action="actions/editar_cliente.php" class="px-7 py-6 space-y-4">
-            <?= csrf_field() ?>
-            <input type="hidden" name="id" id="edit-id"/>
+     class="modal-overlay hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+     style="background:rgba(2,8,23,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)"
+     onclick="if(event.target===this)fecharModal('modal-editar')">
 
-            <div id="edit-loading" class="hidden text-center py-8 text-slate-400">
-                <div class="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p class="text-sm">Carregando...</p>
-            </div>
+  <div class="modal-box w-full sm:max-w-lg flex flex-col rounded-t-2xl sm:rounded-2xl"
+       style="max-height:90vh;background:rgba(15,23,42,.97);border:1px solid rgba(255,255,255,.08);box-shadow:0 25px 60px rgba(0,0,0,.6)"
+       onclick="event.stopPropagation()">
 
-            <div id="edit-fields" class="grid grid-cols-2 gap-4">
-                <div class="col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nome do Cliente *</label>
-                    <input name="nome" id="edit-nome" type="text" required
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">E-mail</label>
-                    <input name="email" id="edit-email" type="email"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Domínio</label>
-                    <input name="dominio" id="edit-dominio" type="text"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Valor Anual (R$)</label>
-                    <input name="valor_anual" id="edit-valor" type="number" step="0.01" min="0"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Forma de Pagamento</label>
-                    <select name="tipo_pagamento" id="edit-tipo"
-                            class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none cursor-pointer">
-                        <option value="a vista">À vista</option>
-                        <option value="2x">2x</option>
-                        <option value="3x">3x</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Status</label>
-                    <select name="status" id="edit-status"
-                            class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none cursor-pointer">
-                        <option value="em dia">Em dia</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="vence em 15 dias">Vence em 15 dias</option>
-                    </select>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Data de Vencimento</label>
-                    <input name="data_vencimento_base" id="edit-vencimento" type="date"
-                           class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 pt-2">
-                <button type="button" onclick="document.getElementById('modal-editar').classList.add('hidden')"
-                        class="px-5 py-2.5 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl text-sm transition-colors">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn-primary">
-                    <span class="material-symbols-outlined text-[16px]">save</span> Salvar Alterações
-                </button>
-            </div>
-        </form>
+    <!-- Header fixo -->
+    <div class="flex items-center justify-between px-6 py-4 shrink-0" style="border-bottom:1px solid rgba(255,255,255,.08)">
+      <div>
+        <h3 class="font-bold text-slate-100">Editar Cliente</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Atualize os dados do assinante</p>
+      </div>
+      <button onclick="fecharModal('modal-editar')" class="p-2 rounded-xl text-slate-500 hover:text-slate-200 transition-colors" style="background:rgba(255,255,255,.05)">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
     </div>
+
+    <!-- Form -->
+    <form method="POST" action="actions/editar_cliente.php" class="flex flex-col flex-1 min-h-0">
+      <?= csrf_field() ?>
+      <input type="hidden" name="id" id="edit-id"/>
+
+      <!-- Loading spinner -->
+      <div id="edit-loading" class="hidden flex-1 flex flex-col items-center justify-center py-16">
+        <div class="w-10 h-10 border-2 rounded-full animate-spin mb-3"
+             style="border-color:rgba(74,222,128,.2);border-top-color:#4ade80"></div>
+        <p class="text-sm text-slate-500">Carregando dados...</p>
+      </div>
+
+      <!-- Área com scroll -->
+      <div id="edit-fields" class="overflow-y-auto flex-1 px-6 py-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <!-- Nome -->
+          <div class="sm:col-span-2">
+            <label class="modal-label">Nome do Cliente <span style="color:#4ade80">*</span></label>
+            <input name="nome" id="edit-nome" type="text" required class="modal-input"/>
+          </div>
+
+          <!-- E-mail -->
+          <div>
+            <label class="modal-label">E-mail</label>
+            <input name="email" id="edit-email" type="email" class="modal-input"/>
+          </div>
+
+          <!-- Domínio -->
+          <div>
+            <label class="modal-label">Domínio</label>
+            <input name="dominio" id="edit-dominio" type="text" class="modal-input"/>
+          </div>
+
+          <!-- Tipo de Cobrança -->
+          <div>
+            <label class="modal-label">Tipo de Cobrança</label>
+            <select name="tipo_recorrencia" id="edit-recorrencia"
+                    onchange="toggleCamposRecorrencia('edit')"
+                    class="modal-input cursor-pointer">
+              <option value="anual">Anual</option>
+              <option value="mensal">Mensal</option>
+            </select>
+          </div>
+
+          <!-- Dia de Vencimento (só mensal) -->
+          <div id="edit-dia-wrap" class="hidden">
+            <label class="modal-label">Dia de Vencimento <span style="color:#4ade80">*</span></label>
+            <input name="dia_vencimento" id="edit-dia" type="number" min="1" max="28" placeholder="1–28" class="modal-input"/>
+          </div>
+
+          <!-- Valor (label dinâmico) -->
+          <div>
+            <label class="modal-label" id="edit-label-valor">Valor Anual (R$)</label>
+            <input name="valor_anual" id="edit-valor" type="number" step="0.01" min="0" placeholder="0.00" class="modal-input"/>
+          </div>
+
+          <!-- Forma de Pagamento -->
+          <div>
+            <label class="modal-label">Forma de Pagamento</label>
+            <select name="tipo_pagamento" id="edit-tipo" class="modal-input cursor-pointer">
+              <option value="a vista">À vista</option>
+              <option value="2x">2x</option>
+              <option value="3x">3x</option>
+            </select>
+          </div>
+
+          <!-- Alertar Admin -->
+          <div>
+            <label class="modal-label">Alertar Admin (dias antes)</label>
+            <input name="alerta_admin_dias" id="edit-alerta-admin" type="number" min="1" max="60" placeholder="15" class="modal-input"/>
+          </div>
+
+          <!-- Alertar Cliente -->
+          <div>
+            <label class="modal-label">Alertar Cliente (dias antes)</label>
+            <input name="alerta_cliente_dias" id="edit-alerta-cliente" type="number" min="1" max="60" placeholder="7" class="modal-input"/>
+          </div>
+
+          <!-- Data de Vencimento (oculta se mensal) -->
+          <div id="edit-data-wrap">
+            <label class="modal-label">Data de Vencimento</label>
+            <input name="data_vencimento_base" id="edit-vencimento" type="date" class="modal-input"/>
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label class="modal-label">Status</label>
+            <select name="status" id="edit-status" class="modal-input cursor-pointer">
+              <option value="em dia">Em dia</option>
+              <option value="pendente">Pendente</option>
+              <option value="vence em 15 dias">Vence em 15 dias</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer fixo -->
+      <div class="px-6 py-4 flex justify-end gap-3 shrink-0" style="border-top:1px solid rgba(255,255,255,.08)">
+        <button type="button" onclick="fecharModal('modal-editar')" class="modal-footer-btn-cancel">Cancelar</button>
+        <button type="submit" class="modal-footer-btn-save">
+          <span class="material-symbols-outlined text-[16px]">save</span> Salvar Alterações
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
+// ── Abrir modal com animação
+function abrirModal(id) {
+    const overlay = document.getElementById(id);
+    overlay.classList.remove('hidden');
+    // Reinicia animação do box a cada abertura
+    const box = overlay.querySelector('.modal-box');
+    if (box) { box.style.animation = 'none'; box.offsetHeight; box.style.animation = ''; }
+}
+
+// ── Fechar modal
+function fecharModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+// ── Tecla ESC fecha qualquer modal aberto
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        ['modal-criar', 'modal-editar'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.classList.contains('hidden')) fecharModal(id);
+        });
+    }
+});
+
+// ── Toggle campos dinâmicos conforme tipo de recorrência
+function toggleCamposRecorrencia(prefix) {
+    const sel        = document.getElementById(prefix + '-recorrencia');
+    const diaWrap    = document.getElementById(prefix + '-dia-wrap');
+    const dataWrap   = document.getElementById(prefix + '-data-wrap');
+    const labelValor = document.getElementById(prefix + '-label-valor');
+    const isMensal   = sel && sel.value === 'mensal';
+    if (diaWrap)    diaWrap.classList.toggle('hidden', !isMensal);
+    if (dataWrap)   dataWrap.classList.toggle('hidden',  isMensal);
+    if (labelValor) labelValor.textContent = isMensal ? 'Valor Mensal (R$)' : 'Valor Anual (R$)';
+}
+
+// ── Alias de compatibilidade (chamado em código gerado anteriormente)
+function toggleDiaVenc(prefix) { toggleCamposRecorrencia(prefix); }
+
+// ── Abre modal de edição e popula via fetch
 async function abrirEdicao(id) {
-    const modal   = document.getElementById('modal-editar');
+    abrirModal('modal-editar');
     const loading = document.getElementById('edit-loading');
     const fields  = document.getElementById('edit-fields');
-    modal.classList.remove('hidden');
     loading.classList.remove('hidden');
     fields.classList.add('hidden');
     try {
         const data = await fetch(`actions/get_cliente.php?id=${id}`).then(r => r.json());
-        document.getElementById('edit-id').value        = data.id          ?? '';
-        document.getElementById('edit-nome').value      = data.nome        ?? '';
-        document.getElementById('edit-email').value     = data.email       ?? '';
-        document.getElementById('edit-dominio').value   = data.dominio     ?? '';
-        document.getElementById('edit-valor').value     = data.valor_anual ?? '';
-        document.getElementById('edit-tipo').value      = data.tipo_pagamento ?? 'a vista';
-        document.getElementById('edit-status').value    = data.status      ?? 'em dia';
-        document.getElementById('edit-vencimento').value = data.data_vencimento_base ?? '';
+        document.getElementById('edit-id').value             = data.id                   ?? '';
+        document.getElementById('edit-nome').value           = data.nome                 ?? '';
+        document.getElementById('edit-email').value          = data.email                ?? '';
+        document.getElementById('edit-dominio').value        = data.dominio              ?? '';
+        document.getElementById('edit-valor').value          = data.valor_anual          ?? '';
+        document.getElementById('edit-tipo').value           = data.tipo_pagamento       ?? 'a vista';
+        document.getElementById('edit-status').value         = data.status               ?? 'em dia';
+        document.getElementById('edit-vencimento').value     = data.data_vencimento_base ?? '';
+        document.getElementById('edit-recorrencia').value    = data.tipo_recorrencia     ?? 'anual';
+        document.getElementById('edit-dia').value            = data.dia_vencimento       ?? 1;
+        document.getElementById('edit-alerta-admin').value   = data.alerta_admin_dias    ?? 15;
+        document.getElementById('edit-alerta-cliente').value = data.alerta_cliente_dias  ?? 7;
+        toggleCamposRecorrencia('edit');
         loading.classList.add('hidden');
         fields.classList.remove('hidden');
     } catch {
-        modal.classList.add('hidden');
+        fecharModal('modal-editar');
         alert('Erro ao carregar dados. Tente novamente.');
     }
 }
+
+// ── Auto-abre modal de criação se vier via ?novo=1 (ex: botão do dashboard)
+document.addEventListener('DOMContentLoaded', () => {
+    if (new URLSearchParams(location.search).get('novo') === '1') {
+        abrirModal('modal-criar');
+    }
+});
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

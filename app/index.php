@@ -7,10 +7,11 @@ $page_atual = 'dashboard';
 
 require_once 'config/auth.php';
 
-$header_btn = can('edit_clients') ? '<a href="clientes.php"
+$header_btn = can('edit_clients') ? '<a href="clientes.php?novo=1"
     class="bg-gradient-to-br from-primary to-[#3a5600] text-white px-5 py-2 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm">
     <span class="material-symbols-outlined text-lg">add</span> Novo Cliente
 </a>' : '';
+
 
 require_once 'includes/header.php';
 

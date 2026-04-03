@@ -7,8 +7,10 @@ services:
       - "80:80"
     volumes:
       - ./app:/var/www/html
+      - ./.env:/var/www/html/.env
     depends_on:
       - db
+      - mailpit
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html
 
@@ -33,6 +35,13 @@ services:
       PMA_HOST: db
       PMA_USER: root
       PMA_PASSWORD: root
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    restart: unless-stopped
 
 volumes:
   db_data:

@@ -2,6 +2,7 @@
 /**
  * app/actions/editar_cliente.php
  * Atualiza um cliente existente com validação + CSRF
+ * Issue 001: suporte a tipo_recorrencia, dia_vencimento e alertas
  */
 
 require_once __DIR__ . '/../config/auth.php';
@@ -32,8 +33,15 @@ $tipo    = $_POST['tipo_pagamento'] ?? 'a vista';
 $status  = $_POST['status'] ?? 'em dia';
 $venc    = $_POST['data_vencimento_base'] ?? '';
 
-$tipos_validos  = ['a vista', '2x', '3x'];
-$status_validos = ['em dia', 'pendente', 'vence em 15 dias'];
+// ── Issue 001: Novos campos de recorrência e alertas ──
+$recorrencia    = $_POST['tipo_recorrencia'] ?? 'anual';
+$dia_vencimento = (int) ($_POST['dia_vencimento'] ?? 1);
+$alerta_admin   = (int) ($_POST['alerta_admin_dias'] ?? 15);
+$alerta_cliente = (int) ($_POST['alerta_cliente_dias'] ?? 7);
+
+$tipos_validos      = ['a vista', '2x', '3x'];
+$status_validos     = ['em dia', 'pendente', 'vence em 15 dias'];
+$recorrencia_valida = ['mensal', 'anual'];
 
 $errors = [];
 if ($id <= 0)                                  $errors[] = 'ID de cliente inválido.';
@@ -41,7 +49,11 @@ if (empty($nome))                              $errors[] = 'Nome do cliente é o
 if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Formato de e-mail inválido.';
 if (!in_array($tipo, $tipos_validos))          $tipo = 'a vista';
 if (!in_array($status, $status_validos))       $status = 'em dia';
+if (!in_array($recorrencia, $recorrencia_valida)) $recorrencia = 'anual';
 if ($valor === false || $valor < 0)            $valor = 0;
+$dia_vencimento = max(1, min(28, $dia_vencimento));
+$alerta_admin   = max(1, min(60, $alerta_admin));
+$alerta_cliente = max(1, min(60, $alerta_cliente));
 
 $venc = !empty($venc) ? $venc : null;
 
@@ -63,10 +75,17 @@ try {
     $stmt = $pdo->prepare("
         UPDATE clientes
         SET nome = ?, email = ?, dominio = ?, valor_anual = ?,
-            tipo_pagamento = ?, status = ?, data_vencimento_base = ?
+            tipo_pagamento = ?, status = ?, data_vencimento_base = ?,
+            tipo_recorrencia = ?, dia_vencimento = ?,
+            alerta_admin_dias = ?, alerta_cliente_dias = ?
         WHERE id = ?
     ");
-    $stmt->execute([$nome, $email ?: null, $dominio ?: null, $valor ?: null, $tipo, $status, $venc, $id]);
+    $stmt->execute([
+        $nome, $email ?: null, $dominio ?: null, $valor ?: null,
+        $tipo, $status, $venc,
+        $recorrencia, $dia_vencimento, $alerta_admin, $alerta_cliente,
+        $id,
+    ]);
 
     set_flash('success', "✅ Cliente \"{$nome}\" atualizado com sucesso!");
 } catch (PDOException $e) {

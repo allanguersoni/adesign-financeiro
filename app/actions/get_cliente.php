@@ -21,7 +21,8 @@ if ($id <= 0) {
 
 try {
     $stmt = $pdo->prepare("
-        SELECT id, nome, email, dominio, valor_anual, tipo_pagamento, status, data_vencimento_base
+        SELECT id, nome, email, dominio, valor_anual, tipo_pagamento, status, data_vencimento_base,
+               tipo_recorrencia, dia_vencimento, alerta_admin_dias, alerta_cliente_dias
         FROM clientes WHERE id = ?
     ");
     $stmt->execute([$id]);

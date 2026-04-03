@@ -35,11 +35,11 @@ function send_email(string $to, string $to_name, string $subject, string $html_b
     // Suporta tanto require manual quanto via Composer
     $autoload  = defined('BASE_PATH')
         ? BASE_PATH . '/vendor/autoload.php'
-        : __DIR__ . '/../vendor/autoload.php';
+        : __DIR__ . '/../../vendor/autoload.php';
 
     $manual_dir = defined('BASE_PATH')
         ? BASE_PATH . '/vendor/phpmailer/src'
-        : __DIR__ . '/../vendor/phpmailer/src';
+        : __DIR__ . '/../../vendor/phpmailer/src';
 
     if (file_exists($autoload)) {
         require_once $autoload;
