@@ -1,14 +1,19 @@
 <?php
 /**
  * app/actions/salvar_config.php
- * Processa o formulário de configurações
+ * ==============================
+ * Processa o formulário de configurações.
+ *
+ * Dois blocos independentes, controlados por `action_type`:
+ *   - 'perfil'   → atualiza nome do usuário (edit_profile)
+ *   - 'alertas'  → salva tabela configuracoes (manage_users/admin)
  */
 
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/conexao.php';
+require_once __DIR__ . '/../config/settings.php';
 
 require_auth();
-require_can('edit_profile', '/configuracoes.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /configuracoes.php');
@@ -16,28 +21,85 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!validate_csrf($_POST['csrf_token'] ?? '')) {
-    set_flash('error', 'Token de segurança inválido.');
-    header('Location: /configuracoes.php');
+    set_flash('error', 'Token de segurança inválido. Tente novamente.');
+    redirect_back('/configuracoes.php');
+}
+
+$action_type = $_POST['action_type'] ?? 'perfil';
+
+// ══════════════════════════════════════════════════
+// BLOCO A — Perfil do Usuário (admin + editor)
+// ══════════════════════════════════════════════════
+if ($action_type === 'perfil') {
+    require_can('edit_profile', '/configuracoes.php');
+
+    // Salva notificações pessoais na sessão
+    $_SESSION['config_notif_vencimento'] = isset($_POST['notif_vencimento']) ? 1 : 0;
+    $_SESSION['config_notif_semanal']    = isset($_POST['notif_semanal'])    ? 1 : 0;
+    $_SESSION['config_notif_fraude']     = isset($_POST['notif_fraude'])     ? 1 : 0;
+
+    // Atualiza nome do usuário
+    $novo_nome = sanitize_string($_POST['nome'] ?? '');
+    if (!empty($novo_nome) && strlen($novo_nome) >= 2) {
+        try {
+            $pdo->prepare("UPDATE usuarios SET nome = ? WHERE id = ?")
+                ->execute([$novo_nome, $_SESSION['user_id']]);
+            $_SESSION['user_nome'] = $novo_nome;
+        } catch (PDOException) {
+            // Falha silenciosa — nome não atualizado
+        }
+    }
+
+    set_flash('success', '✅ Perfil atualizado com sucesso!');
+    redirect_back('/configuracoes.php');
+}
+
+// ══════════════════════════════════════════════════
+// BLOCO B — Configurações do Sistema (só admin)
+// ══════════════════════════════════════════════════
+if ($action_type === 'alertas') {
+    require_can('manage_users', '/configuracoes.php');
+
+    // ── Identidade ─────────────────────────────────
+    $nome_empresa = sanitize_string($_POST['nome_empresa'] ?? '');
+    $url_sistema  = sanitize_string($_POST['url_sistema']  ?? '');
+    $email_rodape = sanitize_string($_POST['email_rodape_cobranca'] ?? '');
+
+    if (!empty($nome_empresa)) {
+        save_setting('nome_empresa', $nome_empresa);
+    }
+    if (!empty($url_sistema)) {
+        save_setting('url_sistema', $url_sistema);
+    }
+    save_setting('email_rodape_cobranca', $email_rodape);
+
+    // ── Alertas Admin ──────────────────────────────
+    $alertas_admin = isset($_POST['alertas_email_admin']) ? '1' : '0';
+    $admin_dias    = max(1, min(60, (int) ($_POST['alerta_admin_dias_padrao'] ?? 15)));
+    save_setting('alertas_email_admin',      $alertas_admin);
+    save_setting('alerta_admin_dias_padrao', (string) $admin_dias);
+
+    // ── Alertas Cliente ────────────────────────────
+    $alertas_cliente = isset($_POST['alertas_email_cliente']) ? '1' : '0';
+    $cliente_dias    = max(1, min(60, (int) ($_POST['alerta_cliente_dias_padrao'] ?? 7)));
+    save_setting('alertas_email_cliente',      $alertas_cliente);
+    save_setting('alerta_cliente_dias_padrao', (string) $cliente_dias);
+
+    // ── WhatsApp (futuro) ──────────────────────────
+    // save_setting('alertas_whatsapp', '0'); // sempre desabilitado por ora
+
+    // ── Timestamp do notificador (enviado pelo AJAX do Card 4) ──
+    if (!empty($_POST['_notificador_timestamp'])) {
+        save_setting('notificador_ultimo_disparo', date('Y-m-d H:i:s'));
+    }
+
+    // Invalida cache para refletir novos valores imediatamente
+    flush_settings_cache();
+
+    set_flash('success', '✅ Configurações de alertas salvas com sucesso!');
+    header('Location: /configuracoes.php?secao=alertas');
     exit;
 }
 
-// Salva preferências na sessão do usuário (extensível para DB)
-$_SESSION['config_notif_vencimento'] = isset($_POST['notif_vencimento']) ? 1 : 0;
-$_SESSION['config_notif_semanal']    = isset($_POST['notif_semanal'])    ? 1 : 0;
-$_SESSION['config_notif_fraude']     = isset($_POST['notif_fraude'])     ? 1 : 0;
-
-// Atualiza nome do usuário se alterado
-$novo_nome = sanitize_string($_POST['nome'] ?? '');
-if (!empty($novo_nome) && $novo_nome !== ($_SESSION['user_nome'] ?? '')) {
-    try {
-        $pdo->prepare("UPDATE usuarios SET nome = ? WHERE id = ?")
-            ->execute([$novo_nome, $_SESSION['user_id']]);
-        $_SESSION['user_nome'] = $novo_nome;
-    } catch (PDOException $e) {
-        // Silently fail
-    }
-}
-
-set_flash('success', '✅ Configurações salvas com sucesso!');
-header('Location: /configuracoes.php');
-exit;
+// Fallback
+redirect_back('/configuracoes.php');

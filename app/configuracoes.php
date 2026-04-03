@@ -7,7 +7,7 @@ $page_title = 'Configurações';
 $page_atual = 'configuracoes';
 
 require_once 'includes/header.php';
-// $user definido pelo header.php
+// $user e setting() definidos pelo header.php (via settings.php)
 
 // Preferências salvas na sessão
 $cfg_vencimento = $_SESSION['config_notif_vencimento'] ?? 1;
@@ -43,8 +43,21 @@ $section_inicial = match($_GET['secao'] ?? '') {
     'usuarios'  => 'usuarios',
     'seguranca' => 'seguranca',
     'sistema'   => 'sistema',
+    'alertas'   => 'alertas',
     default     => 'perfil',
 };
+
+// Detecta ambiente (Local vs Produção)
+$smtp_host   = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?? '';
+$is_producao = !in_array($smtp_host, ['localhost', 'mailhog', 'smtp.mailtrap.io', '']);
+$ambiente    = $is_producao ? '🟢 Produção' : '🟡 Local / Sandbox';
+
+// Versão MySQL
+try {
+    $mysql_version = $pdo->query('SELECT VERSION()')->fetchColumn();
+} catch (PDOException) {
+    $mysql_version = 'N/A';
+}
 ?>
 
 <!-- Banner de modo demo -->
@@ -71,7 +84,8 @@ $section_inicial = match($_GET['secao'] ?? '') {
         $sections = [
             ['id' => 'perfil',    'icon' => 'person',               'label' => 'Perfil do Usuário'],
             ['id' => 'seguranca', 'icon' => 'shield',                'label' => 'Segurança'],
-            ['id' => 'sistema',   'icon' => 'settings',              'label' => 'Sistema'],
+            ['id' => 'alertas',   'icon' => 'notifications_active',  'label' => 'Alertas'],
+            ['id' => 'sistema',   'icon' => 'info',                  'label' => 'Sistema'],
         ];
         if (can('manage_users')) {
             $sections[] = ['id' => 'usuarios', 'icon' => 'manage_accounts', 'label' => 'Usuários', 'badge' => count($todos_usuarios)];
@@ -105,6 +119,7 @@ $section_inicial = match($_GET['secao'] ?? '') {
 
                 <form method="POST" action="actions/salvar_config.php" class="px-7 py-6 space-y-5">
                     <?= csrf_field() ?>
+                    <input type="hidden" name="action_type" value="perfil">
                     <div class="flex items-center gap-4 mb-2">
                         <div class="w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shrink-0"
                              style="background:linear-gradient(135deg,rgba(153,224,0,.2),rgba(69,104,0,.1));color:#456800">
@@ -248,6 +263,267 @@ $section_inicial = match($_GET['secao'] ?? '') {
                 <?php endif; ?>
             </div>
         </section>
+
+        <!-- ══════════════ ALERTAS ══════════════ -->
+        <section id="section-alertas" class="config-section hidden">
+
+            <?php if (!can('manage_users')): ?>
+            <div class="flex items-center gap-3 px-5 py-3.5 mb-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                <span class="material-symbols-outlined text-amber-500 icon-fill">lock</span>
+                <p class="text-sm text-amber-800">Somente administradores podem editar estas configurações.</p>
+            </div>
+            <?php endif; ?>
+
+            <form method="POST" action="actions/salvar_config.php" id="form-alertas">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action_type" value="alertas">
+
+            <div class="space-y-5">
+
+            <!-- ── CARD 1: Identidade ─────────────────────────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary icon-fill text-[22px]">domain</span>
+                    <div>
+                        <h3 class="font-bold text-slate-900">Identidade do Sistema</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Usado nos e-mails enviados aos clientes</p>
+                    </div>
+                </div>
+                <div class="px-7 py-6 space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nome da Empresa</label>
+                            <input type="text" name="nome_empresa"
+                                   value="<?= htmlspecialchars(setting('nome_empresa', 'ADesign Financeiro')) ?>"
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>
+                                   class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">URL do Sistema</label>
+                            <input type="url" name="url_sistema"
+                                   value="<?= htmlspecialchars(setting('url_sistema', 'https://clientes.allandesign.com.br')) ?>"
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>
+                                   class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Rodapé dos E-mails de Cobrança</label>
+                        <textarea name="email_rodape_cobranca" rows="3"
+                                  placeholder="Ex: Dúvidas? Responda este e-mail ou ligue (xx) 9xxxx-xxxx"
+                                  <?= !can('manage_users') ? 'disabled' : '' ?>
+                                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>"><?= htmlspecialchars(setting('email_rodape_cobranca', '')) ?></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── CARD 2: Alertas de E-mail ──────────────────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-blue-500 icon-fill text-[22px]">mail</span>
+                    <div>
+                        <h3 class="font-bold text-slate-900">Alertas de E-mail</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Valores padrão globais — cada cliente pode ter configuração individual</p>
+                    </div>
+                </div>
+                <div class="px-7 py-6 space-y-5">
+
+                    <!-- Admin -->
+                    <div class="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-sm text-slate-900">Enviar alertas ao Admin</p>
+                                <p class="text-xs text-slate-400">Notifica o administrador antes do vencimento</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                                <input type="checkbox" class="sr-only peer" name="alertas_email_admin" value="1"
+                                       id="toggle-admin"
+                                       onchange="toggleDias('admin-dias', this.checked)"
+                                       <?= setting('alertas_email_admin', '1') === '1' ? 'checked' : '' ?>
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>>
+                                <div class="w-11 h-6 bg-slate-300 peer-checked:bg-green-500 rounded-full peer transition-all duration-300
+                                            after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                                            after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                            </label>
+                        </div>
+                        <div id="admin-dias" class="<?= setting('alertas_email_admin', '1') === '1' ? '' : 'hidden' ?>">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Quantos dias antes do vencimento</label>
+                            <div class="flex items-center gap-3">
+                                <input type="number" name="alerta_admin_dias_padrao"
+                                       value="<?= (int) setting('alerta_admin_dias_padrao', '15') ?>"
+                                       min="1" max="60"
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-24 h-10 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all">
+                                <span class="text-sm text-slate-500">dias antes do vencimento</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-sm text-slate-900">Enviar alertas ao Cliente</p>
+                                <p class="text-xs text-slate-400">Envia e-mail de cobrança para o cliente antes do vencimento</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                                <input type="checkbox" class="sr-only peer" name="alertas_email_cliente" value="1"
+                                       id="toggle-cliente"
+                                       onchange="toggleDias('cliente-dias', this.checked)"
+                                       <?= setting('alertas_email_cliente', '1') === '1' ? 'checked' : '' ?>
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>>
+                                <div class="w-11 h-6 bg-slate-300 peer-checked:bg-green-500 rounded-full peer transition-all duration-300
+                                            after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                                            after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                            </label>
+                        </div>
+                        <div id="cliente-dias" class="<?= setting('alertas_email_cliente', '1') === '1' ? '' : 'hidden' ?>">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Quantos dias antes do vencimento</label>
+                            <div class="flex items-center gap-3">
+                                <input type="number" name="alerta_cliente_dias_padrao"
+                                       value="<?= (int) setting('alerta_cliente_dias_padrao', '7') ?>"
+                                       min="1" max="60"
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-24 h-10 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all">
+                                <span class="text-sm text-slate-500">dias antes do vencimento</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nota explicativa -->
+                    <div class="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <span class="material-symbols-outlined text-blue-400 text-[18px] shrink-0 mt-0.5">info</span>
+                        <p class="text-xs text-blue-700 leading-relaxed">
+                            <strong>Atenção:</strong> estes são os valores <strong>padrão globais</strong>.
+                            Cada cliente pode ter uma configuração individual de alertas definida no seu cadastro.
+                            O cron respeita o campo <code class="bg-blue-100 px-1 rounded">alerta_admin_dias</code> de cada cliente.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── CARD 3: WhatsApp (Preview) ─────────────────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden opacity-70">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-green-500 icon-fill text-[22px]">chat</span>
+                        <div>
+                            <h3 class="font-bold text-slate-900">WhatsApp</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Notificações via WhatsApp Business API</p>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider rounded-full">Em breve</span>
+                </div>
+                <div class="px-7 py-6">
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 pointer-events-none">
+                        <div>
+                            <p class="font-semibold text-sm text-slate-700">Ativar alertas por WhatsApp</p>
+                            <p class="text-xs text-slate-400">Requer integração com WhatsApp Business API</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-not-allowed opacity-50">
+                            <input type="checkbox" class="sr-only peer" disabled>
+                            <div class="w-11 h-6 bg-slate-300 rounded-full after:content-[''] after:absolute after:top-0.5
+                                        after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5"></div>
+                        </label>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-4 leading-relaxed">
+                        🚧 Integração com WhatsApp Business API está prevista para uma versão futura.
+                        Você será notificado quando esta funcionalidade estiver disponível.
+                    </p>
+                </div>
+            </div>
+
+            <!-- ── CARD 4: Notificador Manual ─────────────────── -->
+            <?php if (can('manage_users')): ?>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary icon-fill text-[22px]">play_circle</span>
+                    <div>
+                        <h3 class="font-bold text-slate-900">Notificador Manual</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Execute o robô de cobranças agora, sem aguardar o cron automático</p>
+                    </div>
+                </div>
+                <div class="px-7 py-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                            <?php $ultimo = setting('notificador_ultimo_disparo'); ?>
+                            <p class="text-sm text-slate-600">
+                                Último disparo:
+                                <strong class="text-slate-900">
+                                    <?= $ultimo ? date('d/m/Y H:i', strtotime($ultimo)) : 'Nunca executado' ?>
+                                </strong>
+                            </p>
+                        </div>
+                        <button type="button" id="btn-notificador"
+                                onclick="executarNotificador()"
+                                class="btn-primary shrink-0">
+                            <span class="material-symbols-outlined text-[17px]" id="notif-icon">send</span>
+                            <span id="notif-label">Executar Notificador</span>
+                        </button>
+                    </div>
+
+                    <!-- Output ao vivo -->
+                    <div id="notif-output-wrap" class="hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Output do Notificador</p>
+                            <button type="button" onclick="document.getElementById('notif-output-wrap').classList.add('hidden')"
+                                    class="text-xs text-slate-400 hover:text-slate-600">fechar ×</button>
+                        </div>
+                        <pre id="notif-output"
+                             class="bg-slate-900 text-green-400 text-xs font-mono p-5 rounded-xl overflow-auto max-h-72 leading-relaxed whitespace-pre-wrap"></pre>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- ── CARD 5: Informações do Sistema ─────────────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-slate-500 icon-fill text-[22px]">info</span>
+                    <h3 class="font-bold text-slate-900">Informações do Sistema</h3>
+                </div>
+                <div class="px-7 py-6 divide-y divide-slate-50 space-y-0">
+                    <?php
+                    $sys_infos = [
+                        ['label' => 'Versão da Aplicação', 'val' => 'ADesign Financeiro v1.0'],
+                        ['label' => 'PHP',                 'val' => phpversion()],
+                        ['label' => 'MySQL',               'val' => $mysql_version],
+                        ['label' => 'Servidor',            'val' => $_SERVER['SERVER_SOFTWARE'] ?? 'Apache/Nginx'],
+                        ['label' => 'Ambiente',            'val' => $ambiente],
+                        ['label' => 'SMTP Host',           'val' => $smtp_host ?: '(não configurado)'],
+                        ['label' => 'Cron Notificador',    'val' => '/cron/notificador.php'],
+                    ];
+                    foreach ($sys_infos as $si): ?>
+                    <div class="flex justify-between items-center py-3">
+                        <span class="text-sm text-slate-500 font-medium"><?= $si['label'] ?></span>
+                        <span class="text-sm font-bold text-slate-900"><?= htmlspecialchars($si['val']) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Botão Salvar -->
+            <?php if (can('manage_users')): ?>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="location.reload()"
+                        class="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl text-sm font-semibold transition-colors">
+                    Descartar
+                </button>
+                <button type="submit" form="form-alertas" class="btn-primary">
+                    <span class="material-symbols-outlined text-[17px]">save</span>
+                    Salvar Configurações
+                </button>
+            </div>
+            <?php else: ?>
+            <p class="text-xs text-amber-600 font-medium flex items-center gap-1.5 bg-amber-50 px-4 py-2.5 rounded-xl">
+                <span class="material-symbols-outlined text-[15px]">lock</span>
+                Somente administradores podem alterar estas configurações.
+            </p>
+            <?php endif; ?>
+
+            </div><!-- /space-y-5 -->
+            </form><!-- /form-alertas -->
+
+        </section><!-- /section-alertas -->
 
         <!-- ══════════════ USUÁRIOS (só admin) ══════════════ -->
         <?php if (can('manage_users')): ?>
@@ -437,8 +713,72 @@ function showSection(id) {
 
 // Detecta âncora na URL para abrir a seção correta
 const anchor = window.location.hash.replace('#', '');
-const validSections = ['perfil', 'seguranca', 'sistema', 'usuarios'];
+const validSections = ['perfil', 'seguranca', 'alertas', 'sistema', 'usuarios'];
 showSection(validSections.includes(anchor) ? anchor : '<?= $section_inicial ?>');
+
+// ── Toggle de dias (mostrar/ocultar campo de dias) ─────────
+function toggleDias(divId, checked) {
+    const div = document.getElementById(divId);
+    if (!div) return;
+    if (checked) {
+        div.classList.remove('hidden');
+    } else {
+        div.classList.add('hidden');
+    }
+}
+
+// ── Notificador AJAX ───────────────────────────────────────
+async function executarNotificador() {
+    const btn    = document.getElementById('btn-notificador');
+    const icon   = document.getElementById('notif-icon');
+    const label  = document.getElementById('notif-label');
+    const wrap   = document.getElementById('notif-output-wrap');
+    const output = document.getElementById('notif-output');
+
+    if (!btn) return;
+
+    // Estado: carregando
+    btn.disabled  = true;
+    icon.textContent = 'hourglass_empty';
+    label.textContent = 'Executando...';
+    wrap.classList.remove('hidden');
+    output.textContent = '⏳ Aguardando resposta do servidor...\n';
+
+    try {
+        const resp = await fetch('/cron/notificador.php', {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const text = await resp.text();
+        output.textContent = text || '(sem output)';
+
+        // Salva timestamp da última execução via action auxiliar
+        await fetch('/actions/salvar_config.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                csrf_token:  document.querySelector('meta[name="csrf-token"]').content,
+                action_type: 'alertas',
+                nome_empresa: document.querySelector('[name="nome_empresa"]')?.value || '',
+                url_sistema:  document.querySelector('[name="url_sistema"]')?.value || '',
+                email_rodape_cobranca: document.querySelector('[name="email_rodape_cobranca"]')?.value || '',
+                alerta_admin_dias_padrao:   document.querySelector('[name="alerta_admin_dias_padrao"]')?.value || '15',
+                alerta_cliente_dias_padrao: document.querySelector('[name="alerta_cliente_dias_padrao"]')?.value || '7',
+                alertas_email_admin:   document.querySelector('[name="alertas_email_admin"]')?.checked   ? '1' : '',
+                alertas_email_cliente: document.querySelector('[name="alertas_email_cliente"]')?.checked ? '1' : '',
+                _notificador_timestamp: new Date().toISOString()
+            })
+        });
+
+    } catch (err) {
+        output.textContent = '❌ Erro ao conectar: ' + err.message;
+    } finally {
+        btn.disabled = false;
+        icon.textContent = 'check_circle';
+        label.textContent = 'Executar Notificador';
+    }
+}
 
 function fecharModalUsuario() {
     const m = document.getElementById('modal-novo-usuario');
