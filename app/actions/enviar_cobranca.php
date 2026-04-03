@@ -7,6 +7,8 @@
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/conexao.php';
 require_once __DIR__ . '/../config/email.php';
+require_once __DIR__ . '/../config/pix_simples.php';
+require_once __DIR__ . '/../config/settings.php';
 
 require_auth();
 require_can('send_charges', '/cobrancas.php');
@@ -46,7 +48,28 @@ try {
     $enviado = false;
     if (!empty($cliente['email'])) {
         try {
-            $html = email_template_cobranca($cliente, $venc);
+            $pix_payload = '';
+            $pix_chave = setting('pix_chave');
+            
+            // Só gera PIX se a chave existir
+            if (!empty($pix_chave)) {
+                try {
+                    $pix = gerar_pix_estatico([
+                        'chave'        => $pix_chave,
+                        'beneficiario' => setting('pix_beneficiario'),
+                        'cidade'       => setting('pix_cidade', 'Sao Paulo'),
+                        'valor'        => $cliente['valor_anual'],
+                        'txid'         => substr(uniqid(), 0, 25),
+                        'descricao'    => 'Cobranca ' . ($cliente['dominio'] ?? '')
+                    ]);
+                    $pix_payload = $pix['payload'] ?? '';
+                } catch (Exception $e) {
+                    $pix_payload = '';
+                }
+            }
+            
+            $html = email_template_cobranca($cliente, $venc, $pix_payload);
+            
             $enviado = send_email(
                 $cliente['email'],
                 $cliente['nome'],

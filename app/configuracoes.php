@@ -401,6 +401,107 @@ try {
                 </div>
             </div>
 
+            <!-- ── CARD PIX: Configurações de Pagamento ─────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary icon-fill text-[22px]">payments</span>
+                    <div>
+                        <h3 class="font-bold text-slate-900">Pagamento PIX</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Configurações de recebimento via PIX</p>
+                    </div>
+                </div>
+                <div class="px-7 py-6 space-y-5">
+                    
+                    <!-- Modo PIX -->
+                    <div class="p-5 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="font-semibold text-sm text-slate-900 mb-3">Modo PIX</p>
+                        <div class="flex items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                                <input type="radio" name="pix_modo" value="simples" 
+                                       onclick="toggleEfí(false)"
+                                       <?= setting('pix_modo', 'simples') === 'simples' ? 'checked' : '' ?>
+                                       class="w-4 h-4 text-primary bg-slate-100 border-slate-300 focus:ring-primary">
+                                <span class="text-sm text-slate-700">Simples (chave PIX)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                                <input type="radio" name="pix_modo" value="avancado"
+                                       onclick="toggleEfí(true)"
+                                       <?= setting('pix_modo', 'simples') === 'avancado' ? 'checked' : '' ?>
+                                       class="w-4 h-4 text-primary bg-slate-100 border-slate-300 focus:ring-primary">
+                                <span class="text-sm text-slate-700">Avançado (Efí Bank)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Seção Modo Simples -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Chave PIX</label>
+                            <input type="text" name="pix_chave" placeholder="Ex: 12345678909"
+                                   value="<?= htmlspecialchars(setting('pix_chave', '')) ?>"
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>
+                                   class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nome Beneficiário</label>
+                            <input type="text" name="pix_beneficiario" placeholder="Ex: Joao Silva"
+                                   value="<?= htmlspecialchars(setting('pix_beneficiario', '')) ?>"
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>
+                                   class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cidade</label>
+                            <input type="text" name="pix_cidade" placeholder="Ex: Sao Paulo"
+                                   value="<?= htmlspecialchars(setting('pix_cidade', '')) ?>"
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>
+                                   class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                        </div>
+                    </div>
+
+                    <!-- Seção Modo Avançado (Efí Bank) -->
+                    <div id="secao-efi" class="<?= setting('pix_modo', 'simples') === 'avancado' ? '' : 'hidden' ?> p-5 bg-primary/5 rounded-xl border border-primary/20 space-y-5">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-slate-900 flex items-center gap-2">
+                                Credenciais Efí Bank
+                            </h4>
+                            <span class="px-2.5 py-1 bg-primary/20 text-primary text-[10px] font-black uppercase tracking-wider rounded-full">Requer conta gratuita</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client ID</label>
+                                <input type="text" name="efi_client_id"
+                                       value="<?= htmlspecialchars(setting('efi_client_id', '')) ?>"
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client Secret</label>
+                                <input type="password" name="efi_client_secret"
+                                       value="<?= htmlspecialchars(setting('efi_client_secret', '')) ?>"
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200">
+                            <div>
+                                <p class="font-semibold text-sm text-slate-900">Ambiente Sandbox</p>
+                                <p class="text-xs text-slate-400">Ative para testes. Desative para produção.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                                <input type="checkbox" class="sr-only peer" name="efi_sandbox" value="1"
+                                       <?= setting('efi_sandbox', '1') === '1' ? 'checked' : '' ?>
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>>
+                                <div class="w-11 h-6 bg-slate-300 peer-checked:bg-green-500 rounded-full peer transition-all duration-300
+                                            after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                                            after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ── CARD 3: WhatsApp (Preview) ─────────────────── -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden opacity-70">
                 <div class="px-7 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -724,6 +825,17 @@ function toggleDias(divId, checked) {
         div.classList.remove('hidden');
     } else {
         div.classList.add('hidden');
+    }
+}
+
+// ── Toggle PIX Efí ─────────────────────────────────────────
+function toggleEfí(avancado) {
+    const section = document.getElementById('secao-efi');
+    if (!section) return;
+    if (avancado) {
+        section.classList.remove('hidden');
+    } else {
+        section.classList.add('hidden');
     }
 }
 

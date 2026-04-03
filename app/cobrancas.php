@@ -26,10 +26,17 @@ $filter = $_GET['status'] ?? '';
 $where  = '';
 $params = [];
 if (in_array($filter, ['em dia', 'pendente', 'vence em 15 dias'])) {
-    $where  = 'WHERE status = ?';
+    $where  = 'WHERE c.status = ?';
     $params = [$filter];
 }
-$stmt = $pdo->prepare("SELECT * FROM clientes {$where} ORDER BY data_vencimento_base ASC");
+$stmt = $pdo->prepare("
+    SELECT c.*, 
+        (SELECT id FROM pagamentos WHERE cliente_id = c.id AND status IN ('pendente', 'cancelado') ORDER BY id DESC LIMIT 1) AS pagamento_id,
+        (SELECT pix_token FROM pagamentos WHERE cliente_id = c.id AND status IN ('pendente', 'cancelado') ORDER BY id DESC LIMIT 1) AS pix_token
+    FROM clientes c 
+    {$where} 
+    ORDER BY c.data_vencimento_base ASC
+");
 $stmt->execute($params);
 $faturas = $stmt->fetchAll();
 ?>
@@ -143,26 +150,63 @@ $faturas = $stmt->fetchAll();
                             <?= htmlspecialchars($f['status']) ?>
                         </span>
                     </td>
-                    <td class="px-7 py-4 text-center">
+                    <td class="px-7 py-4">
+                        <div class="flex items-center justify-center gap-1.5">
                         <?php if ($f['status'] === 'pendente' || $f['status'] === 'vence em 15 dias'): ?>
                             <?php if (can('send_charges')): ?>
-                                <!-- Botão "Enviar Cobrança" — form POST com CSRF -->
+                                <!-- Botão "Enviar Cobrança" -->
                                 <form method="POST" action="actions/enviar_cobranca.php" class="inline">
-                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="id" value="<?= $f['id'] ?>">
                                     <button type="submit"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 text-error text-xs font-bold rounded-lg hover:bg-error/20 transition-colors whitespace-nowrap mx-auto"
+                                            class="flex items-center gap-1 px-3 py-1.5 bg-error/10 text-error text-[11px] font-bold rounded-lg hover:bg-error/20 transition-colors whitespace-nowrap"
                                             title="Enviar cobrança">
                                         <span class="material-symbols-outlined text-[15px]">mail</span>
                                         Cobrar
                                     </button>
                                 </form>
+                                
+                                <!-- Botão Gerar PIX -->
+                                <?php if (!empty($f['pagamento_id'])): ?>
+                                    <?php if (!empty($f['pix_token'])): ?>
+                                        <a href="pix.php?token=<?= $f['pix_token'] ?>" target="_blank"
+                                           class="flex items-center gap-1 px-3 py-1.5 bg-[#0ea5e9]/10 text-[#0ea5e9] text-[11px] font-bold rounded-lg hover:bg-[#0ea5e9]/20 transition-colors whitespace-nowrap"
+                                            title="Ver PIX gerado">
+                                            <span class="material-symbols-outlined text-[15px]">qr_code</span>
+                                            <span>Ver PIX</span>
+                                        </a>
+                                    <?php else: ?>
+                                        <form method="POST" action="actions/gerar_link_pix.php" target="_blank" class="inline">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="pagamento_id" value="<?= $f['pagamento_id'] ?>">
+                                            <button type="submit"
+                                                    class="flex items-center gap-1 px-3 py-1.5 bg-[#0ea5e9]/10 text-[#0ea5e9] text-[11px] font-bold rounded-lg hover:bg-[#0ea5e9]/20 transition-colors whitespace-nowrap"
+                                                    title="Gerar código PIX">
+                                                <span class="material-symbols-outlined text-[15px]">pix</span>
+                                                <span>Gerar PIX</span>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <form method="POST" action="actions/gerar_link_pix.php" target="_blank" class="inline">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="cliente_id" value="<?= $f['id'] ?>">
+                                        <button type="submit"
+                                                class="flex items-center gap-1 px-3 py-1.5 bg-[#0ea5e9]/10 text-[#0ea5e9] text-[11px] font-bold rounded-lg hover:bg-[#0ea5e9]/20 transition-colors whitespace-nowrap"
+                                                title="Gerar código PIX (Criará cobrança automática)">
+                                            <span class="material-symbols-outlined text-[15px]">pix</span>
+                                            <span>Gerar PIX</span>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                                
                             <?php else: ?>
                                 <span class="material-symbols-outlined text-[17px] text-slate-300 pointer-events-none" title="Apenas visualização">lock</span>
                             <?php endif; ?>
                         <?php else: ?>
-                        <span class="text-slate-300 text-xs">—</span>
+                            <span class="text-slate-300 text-xs">—</span>
                         <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>

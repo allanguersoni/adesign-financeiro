@@ -97,10 +97,29 @@ function use_phpmailer_ns(): void {}
 /**
  * Template HTML de e-mail de cobrança
  */
-function email_template_cobranca(array $cliente, string $vencimento): string
+function email_template_cobranca(array $cliente, string $vencimento, ?string $pix_payload = null): string
 {
     $nome  = htmlspecialchars($cliente['nome']);
     $valor = 'R$ ' . number_format((float)($cliente['valor_anual'] ?? 0), 2, ',', '.');
+    
+    $pix_block = '';
+    if (!empty($pix_payload)) {
+        $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($pix_payload);
+        $pix_block = <<<HTML
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center">
+        <p style="color:#166534;font-size:16px;font-weight:700;margin:0 0 8px">Pague com PIX</p>
+        <p style="color:#15803d;font-size:13px;margin:0 0 16px">Escaneie o QR Code ou copie o código PIX</p>
+        
+        <img src="{$qr_url}" alt="QR Code PIX" style="width:200px;height:200px;margin:0 auto 16px;display:block;border-radius:8px;border:1px solid #dcfce7">
+        
+        <p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">Código Copia e Cola:</p>
+        <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:8px;padding:12px;word-break:break-all;color:#1e293b;font-size:12px;font-family:monospace">
+          {$pix_payload}
+        </div>
+      </div>
+HTML;
+    }
+
     return <<<HTML
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -123,6 +142,9 @@ function email_template_cobranca(array $cliente, string $vencimento): string
         <p style="color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">Valor em aberto</p>
         <p style="color:#1e293b;font-size:28px;font-weight:900;margin:0">{$valor}</p>
       </div>
+
+{$pix_block}
+
       <p style="color:#64748b;font-size:13px;margin:0">
         Em caso de dúvidas, entre em contato pelo e-mail
         <a href="mailto:financeiro@allandesign.com.br" style="color:#456800">financeiro@allandesign.com.br</a>.
