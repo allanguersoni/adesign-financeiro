@@ -30,6 +30,7 @@ $nav_items = [
     ['href' => 'index.php',         'key' => 'dashboard',     'icon' => 'dashboard',      'label' => 'Dashboard'],
     ['href' => 'clientes.php',      'key' => 'clientes',      'icon' => 'groups',         'label' => 'Clientes'],
     ['href' => 'cobrancas.php',     'key' => 'cobrancas',     'icon' => 'receipt_long',   'label' => 'Cobranças'],
+    ['href' => 'pagamentos.php',    'key' => 'pagamentos',    'icon' => 'payments',       'label' => 'Pagamentos'],
     ['href' => 'configuracoes.php', 'key' => 'configuracoes', 'icon' => 'settings',       'label' => 'Configurações'],
 ];
 
