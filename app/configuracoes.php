@@ -502,34 +502,155 @@ try {
                 </div>
             </div>
 
-            <!-- ── CARD 3: WhatsApp (Preview) ─────────────────── -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden opacity-70">
-                <div class="px-7 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-green-500 icon-fill text-[22px]">chat</span>
-                        <div>
-                            <h3 class="font-bold text-slate-900">WhatsApp</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Notificações via WhatsApp Business API</p>
-                        </div>
+            <!-- ── CARD 3: WhatsApp Z-API ─────────────────────── -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-7 py-5 border-b border-slate-100 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-green-500 icon-fill text-[22px]">chat</span>
+                    <div>
+                        <h3 class="font-bold text-slate-900">WhatsApp</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Notificações automáticas via Z-API</p>
                     </div>
-                    <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider rounded-full">Em breve</span>
                 </div>
-                <div class="px-7 py-6">
-                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 pointer-events-none">
+                <div class="px-7 py-6 space-y-5">
+
+                    <!-- Toggle ativar -->
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                         <div>
-                            <p class="font-semibold text-sm text-slate-700">Ativar alertas por WhatsApp</p>
-                            <p class="text-xs text-slate-400">Requer integração com WhatsApp Business API</p>
+                            <p class="font-semibold text-sm text-slate-900">Ativar alertas por WhatsApp</p>
+                            <p class="text-xs text-slate-400">Envia mensagens via Z-API para clientes e admin</p>
                         </div>
-                        <label class="relative inline-flex items-center cursor-not-allowed opacity-50">
-                            <input type="checkbox" class="sr-only peer" disabled>
-                            <div class="w-11 h-6 bg-slate-300 rounded-full after:content-[''] after:absolute after:top-0.5
-                                        after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5"></div>
+                        <label class="relative inline-flex items-center cursor-pointer <?= !can('manage_users') ? 'pointer-events-none opacity-60' : '' ?>">
+                            <input type="checkbox" class="sr-only peer" name="whatsapp_ativo" value="1"
+                                   id="toggle-whatsapp"
+                                   onchange="toggleWhatsAppFields(this.checked)"
+                                   <?= setting('whatsapp_ativo', '0') === '1' ? 'checked' : '' ?>
+                                   <?= !can('manage_users') ? 'disabled' : '' ?>>
+                            <div class="w-11 h-6 bg-slate-300 peer-checked:bg-green-500 rounded-full peer transition-all duration-300
+                                        after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                                        after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
                         </label>
                     </div>
-                    <p class="text-xs text-slate-400 mt-4 leading-relaxed">
-                        🚧 Integração com WhatsApp Business API está prevista para uma versão futura.
-                        Você será notificado quando esta funcionalidade estiver disponível.
-                    </p>
+
+                    <!-- Campos Z-API -->
+                    <div id="whatsapp-fields" class="<?= setting('whatsapp_ativo', '0') === '1' ? '' : 'hidden' ?> space-y-5">
+
+                        <!-- Instance ID + Token -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Instance ID</label>
+                                <input type="text" name="whatsapp_instance_id"
+                                       value="<?= htmlspecialchars(setting('whatsapp_instance_id', '')) ?>"
+                                       placeholder="Ex: 3ABC1DEF2GH..."
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Token Z-API</label>
+                                <div class="relative">
+                                    <input type="password" name="whatsapp_token" id="whatsapp-token"
+                                           value="<?= htmlspecialchars(setting('whatsapp_token', '')) ?>"
+                                           placeholder="••••••••••••"
+                                           <?= !can('manage_users') ? 'disabled' : '' ?>
+                                           class="w-full h-11 px-4 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                                    <button type="button" onclick="toggleWppToken()"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                        <span class="material-symbols-outlined text-[19px]" id="wpp-token-eye">visibility</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Número próprio + Dias antes -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Número WhatsApp Próprio</label>
+                                <input type="text" name="whatsapp_numero_proprio" id="whatsapp-numero-proprio"
+                                       value="<?= htmlspecialchars(setting('whatsapp_numero_proprio', '')) ?>"
+                                       placeholder="Ex: 5511999998888"
+                                       <?= !can('manage_users') ? 'disabled' : '' ?>
+                                       class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                                <p class="text-[11px] text-slate-400 mt-1">Código do país + DDD + número (sem + ou espaços)</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Dias antes do vencimento</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="number" name="whatsapp_dias_antes"
+                                           value="<?= (int) setting('whatsapp_dias_antes', '7') ?>"
+                                           min="1" max="30"
+                                           <?= !can('manage_users') ? 'disabled' : '' ?>
+                                           class="w-24 h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>">
+                                    <span class="text-sm text-slate-500">dias antes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Templates -->
+                        <div class="space-y-3">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Templates de Mensagem</p>
+
+                            <!-- Badges clicáveis -->
+                            <?php if (can('manage_users')): ?>
+                            <div class="flex flex-wrap gap-2">
+                                <?php foreach (['{nome}', '{dominio}', '{valor}', '{vencimento}'] as $badge): ?>
+                                <button type="button" onclick="inserirBadge('<?= $badge ?>')"
+                                        class="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-[11px] font-bold hover:bg-green-100 transition-colors">
+                                    <?= $badge ?>
+                                </button>
+                                <?php endforeach; ?>
+                                <span class="text-[10px] text-slate-400 self-center ml-1">← clique para inserir no template ativo</span>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Template vencimento -->
+                            <details class="group bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                                <summary class="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none select-none hover:bg-slate-100 transition-colors">
+                                    <span class="font-semibold text-sm text-slate-700 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-amber-500 text-[17px]">schedule</span>
+                                        Template: Vencimento
+                                    </span>
+                                    <span class="material-symbols-outlined text-slate-400 text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                                </summary>
+                                <div class="px-5 pb-4 pt-1">
+                                    <textarea name="whatsapp_template_vencimento" id="tpl-vencimento" rows="4"
+                                              onfocus="wppActiveTemplate='vencimento'"
+                                              <?= !can('manage_users') ? 'disabled' : '' ?>
+                                              placeholder="Olá {nome}, seu domínio {dominio} vence em breve. Valor: R$ {valor}. Vencimento: {vencimento}."
+                                              class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>"><?= htmlspecialchars(setting('whatsapp_template_vencimento', '')) ?></textarea>
+                                </div>
+                            </details>
+
+                            <!-- Template atraso -->
+                            <details class="group bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                                <summary class="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none select-none hover:bg-slate-100 transition-colors">
+                                    <span class="font-semibold text-sm text-slate-700 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-red-400 text-[17px]">warning</span>
+                                        Template: Atraso
+                                    </span>
+                                    <span class="material-symbols-outlined text-slate-400 text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                                </summary>
+                                <div class="px-5 pb-4 pt-1">
+                                    <textarea name="whatsapp_template_atraso" id="tpl-atraso" rows="4"
+                                              onfocus="wppActiveTemplate='atraso'"
+                                              <?= !can('manage_users') ? 'disabled' : '' ?>
+                                              placeholder="Olá {nome}, o pagamento do domínio {dominio} está em atraso. Valor: R$ {valor}."
+                                              class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all <?= !can('manage_users') ? 'opacity-60 cursor-not-allowed' : '' ?>"><?= htmlspecialchars(setting('whatsapp_template_atraso', '')) ?></textarea>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Botão testar -->
+                        <?php if (can('manage_users')): ?>
+                        <div class="flex items-center gap-3 pt-1">
+                            <button type="button" id="btn-testar-wpp" onclick="testarWhatsApp()"
+                                    class="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 border border-green-200 font-bold rounded-xl text-sm hover:bg-green-100 transition-colors">
+                                <span class="material-symbols-outlined text-[18px]" id="wpp-test-icon">send</span>
+                                <span id="wpp-test-label">Testar Conexão</span>
+                            </button>
+                            <span id="wpp-test-result" class="text-sm font-semibold hidden"></span>
+                        </div>
+                        <?php endif; ?>
+
+                    </div><!-- /whatsapp-fields -->
                 </div>
             </div>
 
@@ -918,6 +1039,73 @@ function toggleSenhaModal() {
     const eye = document.getElementById('senha-eye-modal');
     if (inp.type === 'password') { inp.type = 'text'; eye.textContent = 'visibility_off'; }
     else { inp.type = 'password'; eye.textContent = 'visibility'; }
+}
+
+// ── WhatsApp ───────────────────────────────────────────────
+let wppActiveTemplate = 'vencimento';
+
+function toggleWhatsAppFields(checked) {
+    const fields = document.getElementById('whatsapp-fields');
+    if (fields) fields.classList.toggle('hidden', !checked);
+}
+
+function toggleWppToken() {
+    const inp = document.getElementById('whatsapp-token');
+    const eye = document.getElementById('wpp-token-eye');
+    if (!inp) return;
+    if (inp.type === 'password') { inp.type = 'text'; eye.textContent = 'visibility_off'; }
+    else { inp.type = 'password'; eye.textContent = 'visibility'; }
+}
+
+function inserirBadge(badge) {
+    const id = wppActiveTemplate === 'atraso' ? 'tpl-atraso' : 'tpl-vencimento';
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end   = ta.selectionEnd;
+    ta.value = ta.value.substring(0, start) + badge + ta.value.substring(end);
+    ta.selectionStart = ta.selectionEnd = start + badge.length;
+    ta.focus();
+}
+
+async function testarWhatsApp() {
+    const btn    = document.getElementById('btn-testar-wpp');
+    const icon   = document.getElementById('wpp-test-icon');
+    const label  = document.getElementById('wpp-test-label');
+    const result = document.getElementById('wpp-test-result');
+    const numero = document.getElementById('whatsapp-numero-proprio')?.value || '';
+    if (!btn) return;
+
+    btn.disabled      = true;
+    icon.textContent  = 'hourglass_empty';
+    label.textContent = 'Enviando...';
+    result.classList.add('hidden');
+
+    try {
+        const resp = await fetch('/actions/testar_whatsapp.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({
+                csrf_token: document.querySelector('meta[name="csrf-token"]').content,
+                numero: numero
+            })
+        });
+        const data = await resp.json();
+        result.textContent = data.message || (data.success ? '✅ OK' : '❌ Erro');
+        result.className   = 'text-sm font-semibold ' + (data.success ? 'text-green-600' : 'text-red-500');
+        result.classList.remove('hidden');
+    } catch (err) {
+        result.textContent = '❌ Erro: ' + err.message;
+        result.className   = 'text-sm font-semibold text-red-500';
+        result.classList.remove('hidden');
+    } finally {
+        btn.disabled      = false;
+        icon.textContent  = 'send';
+        label.textContent = 'Testar Conexão';
+    }
 }
 </script>
 
