@@ -34,19 +34,19 @@ Controla: clientes, cobranças recorrentes, inadimplência, pagamentos PIX, noti
 
 ## 🕐 ÚLTIMA SESSÃO
 <!-- Claude atualiza aqui ao encerrar -->
-- **Data:** (não registrada)
-- **O que foi feito:** Estrutura inicial do projeto, WhatsApp Z-API funcionando, PIX estático funcionando
-- **Arquivos modificados:** config/whatsapp.php, cron/whatsapp_notificador.php, actions/testar_whatsapp.php
-- **Estado ao encerrar:** configuracoes.php precisa de redesign completo
+- **Data:** 2026-04-08
+- **O que foi feito:** Redesign do card WhatsApp em `configuracoes.php` (issue 007) com campos reais Z-API, templates colapsáveis e botão de teste. Investigação de bug de overlay cinza/preto em todas as páginas — causa não identificada nos arquivos compartilhados (header/footer sem overlay problemático). Issues 008–011 criadas no backlog.
+- **Arquivos modificados:** app/configuracoes.php, issues/backlog/008–011
+- **Estado ao encerrar:** Bug de overlay relatado mas não resolvido — requer inspeção via DevTools pelo usuário para identificar o elemento exato
 
 ---
 
 ## 🎯 PRÓXIMA SESSÃO
 <!-- Claude atualiza aqui ao encerrar -->
-- **Issue ativa:** Redesign de app/configuracoes.php
-- **Primeiro arquivo a abrir:** app/configuracoes.php + app/actions/salvar_config.php
-- **Contexto crítico:** WhatsApp já funciona no backend — a tela só não tem os campos reais. Não recriar a lógica, apenas o HTML/UI.
-- **Ação imediata:** `wc -l app/configuracoes.php && cat app/actions/salvar_config.php`
+- **Issue ativa:** 009 — UX/Onboarding para leigos (PRIORIDADE)
+- **Primeiro arquivo a abrir:** `app/index.php` (estado vazio) + `app/clientes.php` (formulário)
+- **Contexto crítico:** Antes de implementar, perguntar ao usuário se o bug de overlay foi resolvido. Se não, resolver primeiro.
+- **Ação imediata:** Ler `issues/backlog/009-ux-onboarding-leigos.md` e propor plano em bullets
 
 ---
 
@@ -60,14 +60,11 @@ Controla: clientes, cobranças recorrentes, inadimplência, pagamentos PIX, noti
 | 004 | Cobranças por e-mail (SMTP) | ✅ done |
 | 005 | PIX QR Code estático | ✅ done |
 | 006 | WhatsApp Z-API (backend) | ✅ done |
-| 007 | Redesign configuracoes.php | 🔄 doing |
+| 007 | Redesign configuracoes.php | ✅ done |
 | 008 | Evolution API WhatsApp | 📋 backlog |
-| 009 | Multi-segmento + White-label | 📋 backlog |
+| 009 | UX/Onboarding para leigos | 📋 backlog |
 | 010 | PIX Dinâmico Efí Bank | 📋 backlog |
-| 011 | Dashboard financeiro avançado | 📋 backlog |
-| 012 | Módulo despesas/fluxo de caixa | 📋 backlog |
-| 013 | MEI Helper (DAS) | 📋 backlog |
-| 014 | Multi-tenant SaaS | 📋 backlog |
+| 011 | Multi-tenant + Sub-administradores | 📋 backlog |
 
 ---
 
