@@ -2,7 +2,7 @@
 /**
  * app/index.php — Dashboard Principal
  */
-$page_title = 'Dashboard';
+$page_title = 'Início';
 $page_atual = 'dashboard';
 
 require_once 'config/auth.php';
@@ -23,11 +23,54 @@ $clientes_em_dia  = (int)   $pdo->query("SELECT COUNT(*) FROM clientes WHERE sta
 $vencendo         = (int)   $pdo->query("SELECT COUNT(*) FROM clientes WHERE status = 'vence em 15 dias'")->fetchColumn();
 
 $taxa_adimplencia = $total_clientes > 0 ? round(($clientes_em_dia / $total_clientes) * 100) : 0;
+$is_empty = $total_clientes === 0;
 
 // ── Últimos clientes ──────────────────────────
 $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8")->fetchAll();
 ?>
 
+<?php if ($is_empty): ?>
+<!-- ── ESTADO VAZIO — ONBOARDING ───────────────── -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12 mb-8 flex flex-col items-center text-center">
+    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-5">
+        <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings:'FILL' 1">rocket_launch</span>
+    </div>
+    <h2 class="text-2xl font-extrabold text-slate-900 mb-2">Bem-vindo ao ADesign Financeiro!</h2>
+    <p class="text-slate-500 text-sm mb-8 max-w-md leading-relaxed">
+        Aqui você controla quem te deve, quem já pagou e quando cada cliente vence.
+        Comece cadastrando seu primeiro cliente.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 items-center">
+        <?php if (can('edit_clients')): ?>
+        <a href="clientes.php?novo=1" class="btn-primary text-sm px-8" style="height:48px">
+            <span class="material-symbols-outlined text-[20px]">person_add</span>
+            Cadastrar meu primeiro cliente
+        </a>
+        <?php endif; ?>
+        <a href="configuracoes.php"
+           class="flex items-center gap-2 px-6 py-3 text-slate-500 font-semibold text-sm hover:bg-slate-100 rounded-xl transition-colors">
+            <span class="material-symbols-outlined text-[18px]">settings</span>
+            Configurar o sistema
+        </a>
+    </div>
+    <!-- Passos -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 w-full max-w-lg text-left">
+        <?php foreach ([
+            ['num' => '1', 'title' => 'Cadastre seus clientes',   'desc' => 'Nome, e-mail e quanto cada um te paga'],
+            ['num' => '2', 'title' => 'Envie cobranças',          'desc' => 'O sistema avisa quando alguém está para vencer'],
+            ['num' => '3', 'title' => 'Marque os pagamentos',     'desc' => 'Confirme quando receber e tudo fica no controle'],
+        ] as $step): ?>
+        <div class="flex gap-3 p-4 bg-slate-50 rounded-xl">
+            <div class="w-7 h-7 rounded-full bg-primary text-white text-xs font-black flex items-center justify-center shrink-0"><?= $step['num'] ?></div>
+            <div>
+                <p class="font-bold text-sm text-slate-900"><?= $step['title'] ?></p>
+                <p class="text-xs text-slate-500 mt-0.5"><?= $step['desc'] ?></p>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php else: ?>
 <!-- CARDS MÉTRICAS -->
 <section class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
     <!-- Receita Anual -->
@@ -38,9 +81,9 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
             </div>
             <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Anual</span>
         </div>
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Receita Prevista</p>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">O que você vai receber</p>
         <h3 class="text-2xl font-black text-slate-900">R$ <?= number_format($receita_prevista, 0, ',', '.') ?></h3>
-        <p class="text-xs text-tertiary font-semibold mt-2">Base total de contratos</p>
+        <p class="text-xs text-tertiary font-semibold mt-2">total previsto no ano</p>
     </div>
 
     <!-- Clientes em Dia -->
@@ -51,7 +94,7 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
             </div>
             <span class="text-xs font-bold text-tertiary">+<?= $taxa_adimplencia ?>%</span>
         </div>
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Em Dia</p>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Pagando em dia</p>
         <h3 class="text-2xl font-black text-slate-900"><?= $clientes_em_dia ?></h3>
         <p class="text-xs text-slate-400 font-medium mt-2">de <?= $total_clientes ?> clientes</p>
     </div>
@@ -63,9 +106,9 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
                 <span class="material-symbols-outlined text-error text-2xl" style="font-variation-settings:'FILL' 1">warning</span>
             </div>
         </div>
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Inadimplência</p>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Em atraso</p>
         <h3 class="text-2xl font-black text-error">R$ <?= number_format($inadimplentes, 0, ',', '.') ?></h3>
-        <p class="text-xs text-error/70 font-semibold mt-2">Cobranças pendentes</p>
+        <p class="text-xs text-error/70 font-semibold mt-2">clientes com pagamento atrasado</p>
     </div>
 
     <!-- Vencendo em 15 dias -->
@@ -75,7 +118,7 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
                 <span class="material-symbols-outlined text-[#99E000] text-2xl" style="font-variation-settings:'FILL' 1">event_upcoming</span>
             </div>
         </div>
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Vencendo em 15 dias</p>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Vencem em breve</p>
         <h3 class="text-2xl font-black text-white"><?= $vencendo ?></h3>
         <p class="text-xs text-[#99E000] font-semibold mt-2">
             <?= $vencendo > 0 ? 'Enviar notificações' : 'Tudo em ordem ✓' ?>
@@ -86,7 +129,7 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
 <!-- PROGRESSO DE ADIMPLÊNCIA -->
 <section class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8">
     <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-slate-900">Saúde Financeira da Carteira</h3>
+        <h3 class="font-bold text-slate-900">Como está sua carteira</h3>
         <span class="text-2xl font-black text-primary"><?= $taxa_adimplencia ?>%</span>
     </div>
     <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
@@ -160,5 +203,7 @@ $clientes = $pdo->query("SELECT * FROM clientes ORDER BY criado_em DESC LIMIT 8"
         </table>
     </div>
 </section>
+
+<?php endif; ?>
 
 <?php require_once 'includes/footer.php'; ?>

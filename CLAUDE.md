@@ -34,19 +34,19 @@ Controla: clientes, cobranças recorrentes, inadimplência, pagamentos PIX, noti
 
 ## 🕐 ÚLTIMA SESSÃO
 <!-- Claude atualiza aqui ao encerrar -->
-- **Data:** (não registrada)
-- **O que foi feito:** Estrutura inicial do projeto, WhatsApp Z-API funcionando, PIX estático funcionando
-- **Arquivos modificados:** config/whatsapp.php, cron/whatsapp_notificador.php, actions/testar_whatsapp.php
-- **Estado ao encerrar:** configuracoes.php precisa de redesign completo
+- **Data:** 2026-04-08
+- **O que foi feito:** Diagnóstico confirmou que Issue 007 (Redesign configuracoes.php) já estava completamente implementada — layout duas colunas, menu lateral, todos os campos Z-API, badges, templates, botão testar. Apenas o CLAUDE.md não havia sido atualizado.
+- **Arquivos modificados:** CLAUDE.md (apenas atualização de status)
+- **Estado ao encerrar:** Issue 007 ✅ concluída. Próxima issue a definir do backlog.
 
 ---
 
 ## 🎯 PRÓXIMA SESSÃO
 <!-- Claude atualiza aqui ao encerrar -->
-- **Issue ativa:** Redesign de app/configuracoes.php
-- **Primeiro arquivo a abrir:** app/configuracoes.php + app/actions/salvar_config.php
-- **Contexto crítico:** WhatsApp já funciona no backend — a tela só não tem os campos reais. Não recriar a lógica, apenas o HTML/UI.
-- **Ação imediata:** `wc -l app/configuracoes.php && cat app/actions/salvar_config.php`
+- **Issue ativa:** A definir — próxima do backlog (sugestão: Issue 008 Evolution API ou Issue 010 PIX Dinâmico Efí Bank)
+- **Primeiro passo:** Revisar o backlog com o usuário e escolher a próxima issue
+- **Contexto crítico:** configuracoes.php está completo e funcional (1112 linhas). WhatsApp Z-API 100% integrado na UI.
+- **Ação imediata:** Perguntar ao usuário qual issue priorizar
 
 ---
 
@@ -60,7 +60,7 @@ Controla: clientes, cobranças recorrentes, inadimplência, pagamentos PIX, noti
 | 004 | Cobranças por e-mail (SMTP) | ✅ done |
 | 005 | PIX QR Code estático | ✅ done |
 | 006 | WhatsApp Z-API (backend) | ✅ done |
-| 007 | Redesign configuracoes.php | 🔄 doing |
+| 007 | Redesign configuracoes.php | ✅ done |
 | 008 | Evolution API WhatsApp | 📋 backlog |
 | 009 | Multi-segmento + White-label | 📋 backlog |
 | 010 | PIX Dinâmico Efí Bank | 📋 backlog |
@@ -83,42 +83,18 @@ Controla: clientes, cobranças recorrentes, inadimplência, pagamentos PIX, noti
 
 ---
 
-## 🔄 MISSÃO ATUAL — ISSUE 007
+## ✅ ISSUE 007 — CONCLUÍDA
 
-### Arquivo: `app/configuracoes.php`
+### Arquivo: `app/configuracoes.php` (1112 linhas)
 
-**Problema:** Arquivo grande sem organização visual. Seção WhatsApp mostra "EM BREVE" com toggle desabilitado — campos reais da Z-API não estão na tela.
-
-**Entregável:**
-Redesign completo com layout duas colunas:
-`[Menu lateral com seções] | [Conteúdo da seção ativa]`
-
-**Seções do menu:**
-- 👤 Perfil (nome, senha)
-- 🔔 Alertas (e-mail admin/cliente, dias)
-- 💳 Pagamentos (PIX simples + Efí Bank)
-- 💬 WhatsApp (Z-API — campos reais)
-- 🏢 Empresa (nome, URL, rodapé)
-- ⚙️ Sistema (info técnica + notificador manual)
-- 👥 Usuários (só admin)
-
-**Seção WhatsApp — campos obrigatórios:**
-- Toggle ativar/desativar (`whatsapp_ativo`)
-- Instance ID Z-API (`whatsapp_instance_id`)
-- Token Z-API com campo password + olhinho (`whatsapp_token`)
-- Número WhatsApp próprio (`whatsapp_numero_proprio`)
-- Dias antes do vencimento (`whatsapp_dias_antes`)
-- Templates colapsáveis: vencimento + atraso
-- Badges clicáveis inseríveis: `{nome}` `{dominio}` `{valor}` `{vencimento}`
-- Botão testar → fetch `/actions/testar_whatsapp.php`
-- Resultado inline verde/vermelho
-
-**Constraints que NÃO podem quebrar:**
-- CSRF field no form
-- `action="/actions/salvar_config.php"`
-- Todos os `name=` devem bater com as chaves da tabela `configuracoes`
-- JS puro, TailwindCSS CDN
-- Não reescrever lógica que já funciona
+**Implementado:**
+- Layout `grid-cols-12`: menu lateral (3 cols) + conteúdo (9 cols)
+- Seções: Perfil, Segurança, Sistema, Alertas, WhatsApp, Usuários
+- WhatsApp: toggle, instance_id, token (password+olhinho), numero_proprio, dias_antes
+- Badges clicáveis: `{nome}` `{dominio}` `{valor}` `{vencimento}`
+- Templates: vencimento + atraso
+- Botão testar → `fetch('/actions/testar_whatsapp.php')` com resultado inline
+- CSRF, nomes batendo com tabela `configuracoes`, JS puro, TailwindCSS CDN
 
 ---
 
@@ -358,11 +334,11 @@ text:         #4ade80
 
 ---
 
-## ⚡ COMANDO PARA COMEÇAR ESTA SESSÃO
+## ⚡ COMANDO PARA COMEÇAR A PRÓXIMA SESSÃO
 
 ```bash
-wc -l app/configuracoes.php
-cat app/actions/salvar_config.php
+# Revisar o backlog e escolher a próxima issue com o usuário
+# Sugestões: Issue 008 (Evolution API), Issue 010 (PIX Dinâmico Efí Bank), Issue 011 (Dashboard avançado)
 ```
 
-Após executar, mostre o plano. **Não implemente ainda.**
+Após escolher a issue, leia os arquivos relevantes e mostre o plano. **Não implemente ainda.**
